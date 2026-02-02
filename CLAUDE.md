@@ -43,6 +43,11 @@ Base firmware for the Guition ESP32-S3-4848S040 development board featuring:
 - `GET /api/info` - Device information (heap, PSRAM, uptime, etc.)
 - `POST /api/restart` - Restart the device
 
+### WiFi Endpoints
+- `GET /api/wifi/status` - Current WiFi status (connected, SSID, RSSI)
+- `GET /api/wifi/scan` - Scan for available networks
+- `POST /api/wifi/connect` - Save credentials and connect (JSON: `{ssid, password}`)
+
 ## Development Workflow
 
 ### Building & Flashing
@@ -73,12 +78,17 @@ curl -o screenshot.bmp http://<device-ip>/api/screenshot/download
 
 ## WiFi Configuration
 
-On first boot or if WiFi fails:
+On first boot or if WiFi connection fails:
 1. Device creates AP: "ESP32-Display" (password: "configure")
-2. Connect to AP and access web interface
-3. Future: Add WiFi configuration endpoint
+2. Connect to the AP with your phone/computer
+3. Navigate to `http://192.168.4.1`
+4. Use the WiFi Configuration section to scan and select a network
+5. Enter password and click "Save & Connect"
+6. Device restarts and connects to the configured network
 
-Saved credentials stored in NVS under namespace "wifi".
+To reconfigure WiFi later, access the web interface at the device's IP address.
+
+Saved credentials are stored in NVS under namespace "wifi".
 
 ## LVGL Notes
 

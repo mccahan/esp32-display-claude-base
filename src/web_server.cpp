@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <ElegantOTA.h>
+#include <Preferences.h>
 
 // Global instance
 DisplayWebServer webServer;
@@ -137,6 +138,89 @@ void DisplayWebServer::setupRoutes() {
         delay(100);
         ESP.restart();
     });
+
+    // API: Get WiFi status
+    server.on("/api/wifi/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+        StaticJsonDocument<256> doc;
+        doc["connected"] = (WiFi.status() == WL_CONNECTED);
+        doc["mode"] = (WiFi.getMode() == WIFI_AP) ? "ap" : "station";
+        doc["ssid"] = WiFi.SSID();
+        doc["ip"] = WiFi.localIP().toString();
+        doc["rssi"] = WiFi.RSSI();
+
+        if (WiFi.getMode() == WIFI_AP) {
+            doc["ap_ip"] = WiFi.softAPIP().toString();
+            doc["ap_ssid"] = "ESP32-Display";
+        }
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // API: Scan WiFi networks
+    server.on("/api/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
+        int n = WiFi.scanNetworks();
+        StaticJsonDocument<2048> doc;
+        JsonArray networks = doc.createNestedArray("networks");
+
+        for (int i = 0; i < n && i < 20; i++) {
+            JsonObject net = networks.createNestedObject();
+            net["ssid"] = WiFi.SSID(i);
+            net["rssi"] = WiFi.RSSI(i);
+            net["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+        }
+
+        WiFi.scanDelete();
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
+    // API: Connect to WiFi (with body handler for POST data)
+    server.on("/api/wifi/connect", HTTP_POST,
+        [](AsyncWebServerRequest *request) {
+            // Response is sent after body is processed
+        },
+        NULL,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            StaticJsonDocument<256> doc;
+            DeserializationError error = deserializeJson(doc, data, len);
+
+            if (error) {
+                request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+                return;
+            }
+
+            const char* ssid = doc["ssid"];
+            const char* password = doc["password"] | "";
+
+            if (!ssid || strlen(ssid) == 0) {
+                request->send(400, "application/json", "{\"error\":\"SSID required\"}");
+                return;
+            }
+
+            // Save credentials
+            Preferences prefs;
+            prefs.begin("wifi", false);
+            prefs.putString("ssid", ssid);
+            prefs.putString("password", password);
+            prefs.end();
+
+            StaticJsonDocument<128> response;
+            response["success"] = true;
+            response["message"] = "WiFi credentials saved. Restarting...";
+
+            String responseStr;
+            serializeJson(response, responseStr);
+            request->send(200, "application/json", responseStr);
+
+            // Restart to apply new WiFi settings
+            delay(500);
+            ESP.restart();
+        }
+    );
 }
 
 String DisplayWebServer::getIndexPage() {
@@ -197,6 +281,34 @@ String DisplayWebServer::getIndexPage() {
         .status-success { background: #0f5132; color: #75b798; }
         .status-error { background: #5c1a1a; color: #ea868f; }
         #screenshot-status { margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; color: #888; margin-bottom: 5px; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #0f3460;
+            border-radius: 6px;
+            background: #0f3460;
+            color: #eee;
+            font-size: 1em;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+        .network-list { max-height: 200px; overflow-y: auto; margin-bottom: 15px; }
+        .network-item {
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .network-item:hover { background: #1a4a7a; }
+        .signal { font-size: 0.9em; color: #888; }
     </style>
 </head>
 <body>
@@ -219,6 +331,22 @@ String DisplayWebServer::getIndexPage() {
             <button class="btn btn-secondary" onclick="viewScreenshot()">View</button>
             <button class="btn btn-secondary" onclick="downloadScreenshot()">Download</button>
             <div class="screenshot-container" id="screenshot-container"></div>
+        </div>
+
+        <div class="card">
+            <h2>WiFi Configuration</h2>
+            <div id="wifi-status" style="margin-bottom: 15px;"></div>
+            <button class="btn btn-secondary" onclick="scanNetworks()">Scan Networks</button>
+            <div id="network-list" class="network-list" style="display:none;"></div>
+            <div class="form-group">
+                <label>SSID</label>
+                <input type="text" id="wifi-ssid" placeholder="Network name">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="wifi-password" placeholder="Password (leave empty for open networks)">
+            </div>
+            <button class="btn" onclick="connectWifi()">Save & Connect</button>
         </div>
 
         <div class="card">
@@ -313,9 +441,87 @@ String DisplayWebServer::getIndexPage() {
             }
         }
 
+        async function loadWifiStatus() {
+            try {
+                const response = await fetch('/api/wifi/status');
+                const data = await response.json();
+
+                const status = document.getElementById('wifi-status');
+                if (data.connected) {
+                    status.innerHTML = `<span class="status status-success">Connected to ${data.ssid} (${data.rssi} dBm)</span>`;
+                } else if (data.mode === 'ap') {
+                    status.innerHTML = `<span class="status status-error">AP Mode: Connect to "${data.ap_ssid}" to configure</span>`;
+                } else {
+                    status.innerHTML = `<span class="status status-error">Disconnected</span>`;
+                }
+            } catch (e) {
+                console.error('Failed to load WiFi status:', e);
+            }
+        }
+
+        async function scanNetworks() {
+            const list = document.getElementById('network-list');
+            list.style.display = 'block';
+            list.innerHTML = '<div style="padding: 10px; color: #888;">Scanning...</div>';
+
+            try {
+                const response = await fetch('/api/wifi/scan');
+                const data = await response.json();
+
+                if (data.networks.length === 0) {
+                    list.innerHTML = '<div style="padding: 10px; color: #888;">No networks found</div>';
+                    return;
+                }
+
+                list.innerHTML = data.networks.map(net =>
+                    `<div class="network-item" onclick="selectNetwork('${net.ssid}')">
+                        <span>${net.ssid} ${net.secure ? '🔒' : ''}</span>
+                        <span class="signal">${net.rssi} dBm</span>
+                    </div>`
+                ).join('');
+            } catch (e) {
+                list.innerHTML = '<div style="padding: 10px; color: #ea868f;">Scan failed</div>';
+            }
+        }
+
+        function selectNetwork(ssid) {
+            document.getElementById('wifi-ssid').value = ssid;
+            document.getElementById('network-list').style.display = 'none';
+            document.getElementById('wifi-password').focus();
+        }
+
+        async function connectWifi() {
+            const ssid = document.getElementById('wifi-ssid').value;
+            const password = document.getElementById('wifi-password').value;
+
+            if (!ssid) {
+                alert('Please enter an SSID');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/wifi/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ssid, password })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('WiFi credentials saved. Device will restart and connect to the new network.');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                console.error('Failed to save WiFi:', e);
+            }
+        }
+
         // Load data on page load
         loadDeviceInfo();
+        loadWifiStatus();
         setInterval(loadDeviceInfo, 5000);
+        setInterval(loadWifiStatus, 10000);
 
         // Check for existing screenshot
         fetch('/api/screenshot/status')
