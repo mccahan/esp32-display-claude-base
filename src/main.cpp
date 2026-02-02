@@ -8,6 +8,15 @@
 #include "web_server.h"
 #include "screenshot.h"
 
+// Optional: include secrets.h for default WiFi credentials
+// This file is gitignored and contains WIFI_SSID and WIFI_PASSWORD
+#if __has_include("secrets.h")
+#include "secrets.h"
+#define HAS_DEFAULT_WIFI 1
+#else
+#define HAS_DEFAULT_WIFI 0
+#endif
+
 // ============================================================================
 // PIN DEFINITIONS for Guition ESP32-S3-4848S040
 // ============================================================================
@@ -188,8 +197,17 @@ void setupWiFi() {
     String password = wifi_prefs.getString("password", "");
     wifi_prefs.end();
 
+    // If no saved credentials, try default from secrets.h
+#if HAS_DEFAULT_WIFI
+    if (ssid.length() == 0) {
+        Serial.println("No saved credentials, using defaults from secrets.h");
+        ssid = WIFI_SSID;
+        password = WIFI_PASSWORD;
+    }
+#endif
+
     if (ssid.length() > 0) {
-        Serial.printf("Connecting to saved network: %s\n", ssid.c_str());
+        Serial.printf("Connecting to network: %s\n", ssid.c_str());
         WiFi.begin(ssid.c_str(), password.c_str());
 
         // Wait for connection with timeout

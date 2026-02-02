@@ -21,3 +21,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Secrets (WiFi credentials, API keys, etc.)
+include/secrets.h
