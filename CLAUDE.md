@@ -103,7 +103,10 @@ Saved credentials are stored in NVS under namespace "wifi".
 ├── include/
 │   ├── lv_conf.h        # LVGL configuration
 │   ├── screenshot.h     # Screenshot API
-│   └── web_server.h     # Web server class
+│   ├── web_server.h     # Web server class
+│   └── secrets.h        # WiFi credentials (gitignored)
+├── lib/
+│   └── Arduino_GFX/     # Display library with ST7701 support
 ├── src/
 │   ├── main.cpp         # Main application
 │   ├── screenshot.cpp   # BMP screenshot capture
@@ -111,6 +114,16 @@ Saved credentials are stored in NVS under namespace "wifi".
 ├── platformio.ini       # Build configuration
 ├── partitions.csv       # Flash partitions for OTA
 └── sdkconfig.defaults   # ESP-IDF PSRAM config
+```
+
+### secrets.h (gitignored)
+Create `include/secrets.h` with your WiFi credentials:
+```cpp
+#ifndef SECRETS_H
+#define SECRETS_H
+#define WIFI_SSID "YourNetwork"
+#define WIFI_PASSWORD "YourPassword"
+#endif
 ```
 
 ## Iteration with Claude
