@@ -144,6 +144,6 @@ MIT
 
 ## See Also
 
-- [CLAUDE.md](CLAUDE.md) - Detailed technical reference for Claude
+- [DISPLAY-CLAUDE.md](DISPLAY-CLAUDE.md) - Detailed technical reference (hardware, APIs, troubleshooting)
 - [LVGL Documentation](https://docs.lvgl.io/8.3/)
 - [ESP32-S3 Datasheet](https://www.espressif.com/en/products/socs/esp32-s3)
