@@ -81,7 +81,7 @@ void DisplayWebServer::setupRoutes() {
         size_t size = getScreenshotSize();
 
         // Send as downloadable BMP file
-        AsyncWebServerResponse *response = request->beginResponse_P(
+        AsyncWebServerResponse *response = request->beginResponse(
             200, "image/bmp", data, size
         );
         response->addHeader("Content-Disposition", "attachment; filename=\"screenshot.bmp\"");
@@ -99,7 +99,7 @@ void DisplayWebServer::setupRoutes() {
         size_t size = getScreenshotSize();
 
         // Send as inline image (viewable in browser)
-        AsyncWebServerResponse *response = request->beginResponse_P(
+        AsyncWebServerResponse *response = request->beginResponse(
             200, "image/bmp", data, size
         );
         response->addHeader("Content-Disposition", "inline; filename=\"screenshot.bmp\"");
