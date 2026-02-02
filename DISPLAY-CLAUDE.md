@@ -97,6 +97,13 @@ Saved credentials are stored in NVS under namespace "wifi".
 - 16-bit color depth (RGB565)
 - Full refresh mode to reduce tearing
 
+### Layout Tips
+- Screen is 480x480 pixels
+- Center calculation: `start_x = (480 - total_width) / 2`
+- Leave ~25px margin from edges for comfortable touch targets
+- Button height of 45-55px works well for touch
+- Card gaps of 15-20px provide good visual separation
+
 ## File Structure
 
 ```
@@ -149,3 +156,14 @@ Create `include/secrets.h` with your WiFi credentials:
 ### OTA upload fails
 - Ensure partition table supports OTA (app0/app1)
 - Check available space with `/api/info`
+- OTA via curl may not work reliably; use USB flash: `pio run -t upload`
+
+### Screenshot shows wrong/old content
+- With double buffering, `buf_act` points to the NEXT frame being prepared
+- Screenshot code should read from the OTHER buffer (currently displayed)
+- The fix reads `buf1` if `buf_act == buf2` and vice versa
+- `lv_snapshot_take()` may crash on ESP32 due to memory constraints
+
+### USB Flash is slow
+- Normal speed is ~128 kbit/s, takes ~70 seconds for ~1MB firmware
+- This is expected behavior for this board
