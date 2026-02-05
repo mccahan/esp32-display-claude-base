@@ -331,6 +331,52 @@ void createUI() {
 }
 
 // ============================================================================
+// SERIAL COMMAND HANDLER
+// ============================================================================
+
+String serialBuffer = "";
+
+void handleSerialCommand(const String& cmd) {
+    if (cmd == "STATUS") {
+        // Output structured status for monitor filter
+        Serial.println("---STATUS_BEGIN---");
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("WIFI:CONNECTED");
+            Serial.print("IP:");
+            Serial.println(WiFi.localIP().toString());
+            Serial.print("SSID:");
+            Serial.println(WiFi.SSID());
+        } else if (WiFi.getMode() == WIFI_AP) {
+            Serial.println("WIFI:AP_MODE");
+            Serial.print("IP:");
+            Serial.println(WiFi.softAPIP().toString());
+            Serial.println("SSID:ESP32-Display");
+        } else {
+            Serial.println("WIFI:DISCONNECTED");
+        }
+        Serial.print("HEAP:");
+        Serial.println(ESP.getFreeHeap());
+        Serial.print("UPTIME:");
+        Serial.println(millis() / 1000);
+        Serial.println("---STATUS_END---");
+    }
+}
+
+void processSerial() {
+    while (Serial.available()) {
+        char c = Serial.read();
+        if (c == '\n' || c == '\r') {
+            if (serialBuffer.length() > 0) {
+                handleSerialCommand(serialBuffer);
+                serialBuffer = "";
+            }
+        } else {
+            serialBuffer += c;
+        }
+    }
+}
+
+// ============================================================================
 // ARDUINO SETUP & LOOP
 // ============================================================================
 
@@ -396,6 +442,9 @@ void loop() {
 
     // Handle LVGL tasks
     lv_timer_handler();
+
+    // Process serial commands
+    processSerial();
 
     // Update status display periodically
     static unsigned long last_status_update = 0;

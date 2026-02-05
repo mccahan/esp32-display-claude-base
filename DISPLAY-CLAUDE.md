@@ -56,22 +56,55 @@ Base firmware for the Guition ESP32-S3-4848S040 development board featuring:
 
 ## Development Workflow
 
-### Building & Flashing
+### Building & Flashing via USB
 ```bash
-# Build firmware
-pio run
+# Build and flash via USB - automatically shows IP/WiFi status after flash
+pio run -t upload
+```
 
-# Flash via USB
-pio run --target upload
+Output after flash:
+```
+========================================
+Device Status
+========================================
+WiFi Status: Connected
+IP Address:  10.0.1.46
+Network:     Your Network
+Free Heap:   135 KB
+Uptime:      6s
+========================================
+```
+
+### Getting Device Status (without flashing)
+```bash
+# Query device status via serial
+pio run -t status
+
+# Or use the shell script
+./scripts/status.sh
+```
+
+### Other Commands
+```bash
+# Build only (no flash)
+pio run
 
 # Monitor serial output
 pio device monitor
 ```
 
-### OTA Updates (Recommended)
-1. Build firmware: `pio run`
-2. Navigate to `http://<device-ip>/update`
-3. Upload `.pio/build/esp32s3/firmware.bin`
+### OTA Updates (Recommended for iteration)
+```bash
+# Automated: build, upload, wait for reboot
+./scripts/deploy.sh <device-ip>
+
+# Or manually:
+# 1. Build firmware
+pio run
+# 2. Navigate to http://<device-ip>/update
+# 3. Upload .pio/build/esp32s3/firmware.bin
+# Device auto-restarts after successful upload
+```
 
 ### Taking Screenshots
 ```bash
@@ -90,6 +123,27 @@ curl "http://<device-ip>/api/touch/simulate?x=240&y=240"
 # Simulate touch at specific button location
 curl "http://<device-ip>/api/touch/simulate?x=100&y=400"
 ```
+
+## Serial Commands
+
+The device responds to commands sent via serial (115200 baud):
+
+| Command | Response |
+|---------|----------|
+| `STATUS` | Device status (WiFi, IP, heap, uptime) |
+
+Example response:
+```
+---STATUS_BEGIN---
+WIFI:CONNECTED
+IP:10.0.1.46
+SSID:YourNetwork
+HEAP:138240
+UPTIME:120
+---STATUS_END---
+```
+
+Use `./scripts/status.sh` for a formatted view, or send commands directly via `pio device monitor`.
 
 ## WiFi Configuration
 
@@ -133,6 +187,14 @@ Saved credentials are stored in NVS under namespace "wifi".
 │   ├── main.cpp         # Main application
 │   ├── screenshot.cpp   # BMP screenshot capture
 │   └── web_server.cpp   # HTTP endpoints + OTA
+├── scripts/
+│   ├── status.sh        # Query device IP/status via serial
+│   ├── deploy.sh        # OTA deploy: build, upload, verify
+│   └── get_status.py    # Serial status query (used by status.sh)
+├── monitor/
+│   ├── filter_exit_on_ready.py  # Exit monitor after "System Ready!"
+│   └── filter_get_status.py     # Exit monitor after status response
+├── extra_script.py      # PlatformIO custom targets (upload, status)
 ├── platformio.ini       # Build configuration
 ├── partitions.csv       # Flash partitions for OTA
 └── sdkconfig.defaults   # ESP-IDF PSRAM config
@@ -152,7 +214,7 @@ Create `include/secrets.h` with your WiFi credentials:
 
 1. Describe desired UI changes or features
 2. I will modify the code and explain changes
-3. Build and flash via OTA: `pio run && open http://<ip>/update`
+3. Deploy: `./scripts/deploy.sh <ip>` (or get IP first with `./scripts/status.sh`)
 4. Capture screenshot: `curl -X POST http://<ip>/api/screenshot/capture`
 5. Download and review: `curl -o screen.bmp http://<ip>/api/screenshot/download`
 6. Repeat as needed

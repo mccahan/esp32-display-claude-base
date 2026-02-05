@@ -24,3 +24,4 @@ Thumbs.db
 
 # Secrets (WiFi credentials, API keys, etc.)
 include/secrets.h
+monitor/__pycache__
