@@ -25,7 +25,15 @@ curl -o screenshot.bmp http://<device-ip>/api/screenshot/download
 ```
 
 ### OTA Update
-Upload `.pio/build/esp32s3/firmware.bin` at `http://<device-ip>/update`
+```bash
+./scripts/deploy.sh <device-ip>
+```
+Builds firmware, uploads via OTA, and waits for reboot. Device auto-restarts after successful update.
+
+### Simulate Touch
+```bash
+curl "http://<device-ip>/api/touch/simulate?x=240&y=240"
+```
 
 ## Before Making Changes
 

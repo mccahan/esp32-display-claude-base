@@ -4,6 +4,12 @@
 #include <ElegantOTA.h>
 #include <Preferences.h>
 
+// External variables for touch simulation (defined in main.cpp)
+extern volatile bool simulated_touch_active;
+extern volatile int16_t simulated_touch_x;
+extern volatile int16_t simulated_touch_y;
+extern volatile unsigned long simulated_touch_start;
+
 // Global instance
 DisplayWebServer webServer;
 
@@ -24,6 +30,32 @@ String DisplayWebServer::getIPAddress() {
 void DisplayWebServer::setupOTA() {
     // ElegantOTA provides a nice web UI for firmware updates
     ElegantOTA.begin(&server);
+
+    // Log OTA start
+    ElegantOTA.onStart([]() {
+        Serial.println("OTA update started...");
+    });
+
+    // Log OTA progress
+    ElegantOTA.onProgress([](size_t current, size_t total) {
+        static int lastPercent = -1;
+        int percent = (current * 100) / total;
+        if (percent != lastPercent && percent % 10 == 0) {
+            Serial.printf("OTA progress: %d%%\n", percent);
+            lastPercent = percent;
+        }
+    });
+
+    // Reset device when OTA completes successfully
+    ElegantOTA.onEnd([this](bool success) {
+        if (success) {
+            Serial.println("OTA update successful, restarting...");
+            server.end(); // Explicitly close open HTTP connections
+        } else {
+            Serial.println("OTA update failed");
+        }
+    });
+
     Serial.println("OTA updates available at /update");
 }
 
@@ -137,6 +169,36 @@ void DisplayWebServer::setupRoutes() {
         request->send(200, "application/json", "{\"message\":\"Restarting...\"}");
         delay(100);
         ESP.restart();
+    });
+
+    // API: Simulate touch at a point (GET with query params: ?x=240&y=240)
+    server.on("/api/touch/simulate", HTTP_GET, [](AsyncWebServerRequest *request) {
+        // Check for required x and y parameters
+        if (!request->hasParam("x") || !request->hasParam("y")) {
+            request->send(400, "text/plain", "x and y required");
+            return;
+        }
+
+        int x = request->getParam("x")->value().toInt();
+        int y = request->getParam("y")->value().toInt();
+
+        // Validate coordinates are within display bounds
+        if (x < 0 || x >= 480 || y < 0 || y >= 480) {
+            request->send(400, "text/plain", "Out of bounds (0-479)");
+            return;
+        }
+
+        // Set simulated touch state
+        simulated_touch_x = (int16_t)x;
+        simulated_touch_y = (int16_t)y;
+        simulated_touch_start = millis();
+        simulated_touch_active = true;
+
+        Serial.printf("Simulating touch at (%d, %d)\n", x, y);
+
+        char buf[64];
+        snprintf(buf, sizeof(buf), "{\"success\":true,\"x\":%d,\"y\":%d}", x, y);
+        request->send(200, "application/json", buf);
     });
 
     // API: Get WiFi status

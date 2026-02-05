@@ -7,6 +7,7 @@
 #include <Preferences.h>
 #include "web_server.h"
 #include "screenshot.h"
+#include <ElegantOTA.h>
 
 // Optional: include secrets.h for default WiFi credentials
 // This file is gitignored and contains WIFI_SSID and WIFI_PASSWORD
@@ -77,6 +78,13 @@ static unsigned long last_tick = 0;
 static lv_indev_drv_t indev_drv;
 static lv_indev_t *touch_indev = nullptr;
 
+// Simulated touch state (for API-driven touch simulation)
+volatile bool simulated_touch_active = false;
+volatile int16_t simulated_touch_x = 0;
+volatile int16_t simulated_touch_y = 0;
+volatile unsigned long simulated_touch_start = 0;
+const unsigned long SIMULATED_TOUCH_DURATION = 150; // ms
+
 // WiFi preferences storage
 Preferences wifi_prefs;
 
@@ -100,6 +108,20 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 
 // Touch read callback for LVGL
 void my_touchpad_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
+    // Check for simulated touch first
+    if (simulated_touch_active) {
+        unsigned long elapsed = millis() - simulated_touch_start;
+        if (elapsed < SIMULATED_TOUCH_DURATION) {
+            data->state = LV_INDEV_STATE_PRESSED;
+            data->point.x = simulated_touch_x;
+            data->point.y = simulated_touch_y;
+            return;
+        } else {
+            // Simulated touch duration expired
+            simulated_touch_active = false;
+        }
+    }
+
     touchController.read();
 
     if (touchController.isTouched) {
@@ -351,13 +373,17 @@ void setup() {
     // Start web server
     webServer.begin();
 
+    // Sleep for 5 seconds
+    Serial.println("Sleeping for 5 seconds...");
+    delay(5000);
+
     Serial.println("\n========================================");
     Serial.println("System Ready!");
     Serial.printf("Web interface: http://%s\n",
                   WiFi.status() == WL_CONNECTED ?
                   WiFi.localIP().toString().c_str() :
                   WiFi.softAPIP().toString().c_str());
-    Serial.println("OTA updates:   http://<ip>/update");
+    Serial.println("OTA updates:   http://<ip>/update (auto-reboot)");
     Serial.println("Screenshot:    POST /api/screenshot/capture");
     Serial.println("========================================\n");
 }
@@ -377,6 +403,9 @@ void loop() {
         updateStatusLabel();
         last_status_update = now;
     }
+
+    // Handle OTA updates
+    ElegantOTA.loop();
 
     // Small delay to prevent watchdog issues
     delay(5);

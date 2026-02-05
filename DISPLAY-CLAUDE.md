@@ -38,6 +38,12 @@ Base firmware for the Guition ESP32-S3-4848S040 development board featuring:
 ### OTA Updates
 - Navigate to `http://<device-ip>/update` for firmware upload
 - Uses ElegantOTA library with web UI
+- Device automatically restarts after successful update
+
+### Touch Simulation
+- `GET /api/touch/simulate?x=240&y=240` - Simulate a touch at specified coordinates
+  - Query params: `x` and `y` (coordinates 0-479)
+  - Touch lasts ~150ms (enough to trigger LVGL events)
 
 ### System Endpoints
 - `GET /api/info` - Device information (heap, PSRAM, uptime, etc.)
@@ -74,6 +80,15 @@ curl -X POST http://<device-ip>/api/screenshot/capture
 
 # Download screenshot
 curl -o screenshot.bmp http://<device-ip>/api/screenshot/download
+```
+
+### Simulating Touch
+```bash
+# Simulate touch at center of screen
+curl "http://<device-ip>/api/touch/simulate?x=240&y=240"
+
+# Simulate touch at specific button location
+curl "http://<device-ip>/api/touch/simulate?x=100&y=400"
 ```
 
 ## WiFi Configuration
