@@ -2,19 +2,21 @@
 
 A starter template for rapid UI development on the Guition ESP32-S3-4848S040 display using Claude as your development partner.
 
+> Claude, you are connected to an ESP32 with display over USB. Create an interface that points an arrow towards the nearest aircraft to the user's location. Use open web APIs to get flight data, including flight number, airspeed, altitude, aircraft type, and location. Iterate and confirm the display is functioning by flashing it, pulling a screenshot, and adjusting in a loop until you complete the UI. @DISPLAY-CLAUDE.md
+
 ## What This Is
 
 This repository provides a working foundation for building custom UIs on a 480x480 touchscreen display. It's designed specifically to enable fast iteration cycles with Claude (or other AI assistants) by including:
 
 - **Screenshot API** - Capture the current display state as a BMP image
-- **OTA Updates** - Flash new firmware without USB cables
+- **OTA Updates** - Flash new firmware faster and without USB cables
 - **Web Dashboard** - Monitor device status and manage WiFi
 - **LVGL Framework** - Industry-standard embedded graphics library
 
 ## Hardware
 
 **Guition ESP32-S3-4848S040**
-- 480x480 IPS display (ST7701 controller)
+- 480x480 IPS display (ST7701 controller) like [this one](https://www.aliexpress.us/item/3256809197960152.html)
 - Capacitive touch (GT911)
 - ESP32-S3 with 8MB PSRAM
 - 16MB Flash
@@ -64,7 +66,7 @@ This template enables a conversational development workflow:
 1. **Describe** what you want to build or change
 2. **Claude modifies** the LVGL UI code in `src/main.cpp`
 3. **Build & flash** via OTA: `pio run` then upload at `/update`
-4. **Screenshot** the result:
+4. **Screenshot** the result in the web interface, or:
    ```bash
    curl -X POST http://<ip>/api/screenshot/capture
    curl -o screen.bmp http://<ip>/api/screenshot/download

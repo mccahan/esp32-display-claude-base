@@ -244,3 +244,4 @@ Create `include/secrets.h` with your WiFi credentials:
 ### USB Flash is slow
 - Normal speed is ~128 kbit/s, takes ~70 seconds for ~1MB firmware
 - This is expected behavior for this board
+- Use OTA instead, when possible
