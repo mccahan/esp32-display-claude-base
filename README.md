@@ -4,6 +4,15 @@ A starter template for rapid UI development on the Guition ESP32-S3-4848S040 dis
 
 > Claude, you are connected to an ESP32 with display over USB. Create an interface that points an arrow towards the nearest aircraft to the user's location. Use open web APIs to get flight data, including flight number, airspeed, altitude, aircraft type, and location. Iterate and confirm the display is functioning by flashing it, pulling a screenshot, and adjusting in a loop until you complete the UI. @DISPLAY-CLAUDE.md
 
+## Screenshots
+
+<p float="left">
+  <img src="samples/screenshot-nearest-plane.png" width="200" />
+  <img src="samples/screenshot-darkmode.png" width="200" />
+  <img src="samples/screenshot-lcars.png" width="200" />
+  <img src="samples/screenshot-cyberpunk.png" width="200" />
+</p>
+
 ## What This Is
 
 This repository provides a working foundation for building custom UIs on a 480x480 touchscreen display. It's designed specifically to enable fast iteration cycles with Claude (or other AI assistants) by including:
@@ -139,6 +148,11 @@ See [LVGL Documentation](https://docs.lvgl.io/8.3/) for widget reference.
 - **Touch**: Coordinates transformed from GT911's bottom-right origin
 - **Memory**: ~135KB heap, ~6MB PSRAM available after boot
 - **Screenshots**: 480x480 24-bit BMP (~675KB)
+
+## Built with this project
+
+- [esp32-display-panel](https://github.com/mccahan/esp32-display-panel) - A home control panel with multiple themes
+- [esp32-nearest-plane](https://github.com/mccahan/esp32-nearest-plane) - Show the closest plane to you
 
 ## License
 
